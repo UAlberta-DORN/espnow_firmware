@@ -9,8 +9,7 @@
 #include <capstone_default_settings.h>
 #endif
 
-unsigned long hash(String str_in)
-{
+unsigned long hash(String str_in){
     char *str=&str_in[sizeof(str_in)];
     unsigned long hash = 5381;
     int c;
@@ -20,6 +19,18 @@ unsigned long hash(String str_in)
     Serial.println(hash);
     return hash;
 }
+
+
+void sendData(const uint8_t *mac_addr, String package);
+
+//String type_of(String a) { return "String"; }
+//String type_of(int a) { return "int"; }
+//String type_of(char *a) { return "char"; }
+//String type_of(float a) { return "float"; }
+//String type_of(bool a) { return "bool"; }
+//String type_of(StaticJsonDocument<DEFAULT_DOC_SIZE> a) { return "Json"; }
+String type_of(uint8_t a) { return "uint8_t"; }
+//String type_of(const uint8_t a) { return "uint8_t"; }
 
 String package_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
   String json_str;
@@ -37,12 +48,78 @@ String package_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
   
   }
 
+bool check_package_hash (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+  if (hash(json_doc["json"])!=json_doc["hash"]){
+      return false;    
+    }
+  return true; 
+    
+  }
+  
+void ask_for_resend (const uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+  json_doc["command"]="resend";
+  String package;
+  package = package_json (json_doc);
+  
+  sendData(mac_addr,package);
+
+  }
+  
+void command_clarification (uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+  json_doc["command"]="command_clarification";
+  String package;
+  package = package_json (json_doc);
+  
+  sendData(mac_addr,package);
+
+  }
+  
+StaticJsonDocument<DEFAULT_DOC_SIZE> unpackage_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+  StaticJsonDocument <DEFAULT_DOC_SIZE> out_doc;
+  deserializeJson(out_doc, json_doc["json"]);
+  return out_doc; 
+  }
+
+void write_doc_to_EEPROM(int address, StaticJsonDocument<EEPROM_SIZE> eeprom_json_doc){
+  String eeprom_str;
+  serializeJson(eeprom_json_doc, eeprom_str);
+  
+  for(int i=0;i<EEPROM_SIZE;i++)
+  {
+    EEPROM.write(address+i, eeprom_str[i]);
+  }
+  EEPROM.write(address + EEPROM_SIZE,'\0');
+  EEPROM.commit();
+}
+
+
+StaticJsonDocument<EEPROM_SIZE> read_doc_from_EEPROM(int address)
+{
+  char eeprom_str[EEPROM_SIZE];
+  int i=0;
+  unsigned char k;
+  k = EEPROM.read(address);
+  while(k != '\0' && i < EEPROM_SIZE){
+    k = EEPROM.read(address + i);
+    eeprom_str[i] = k;
+    i++;
+  }
+  eeprom_str[i]='\0';
+  
+  StaticJsonDocument<EEPROM_SIZE> eeprom_json_doc;
+  deserializeJson(eeprom_json_doc, String(eeprom_str));
+  
+  return eeprom_json_doc;
+}
+
 StaticJsonDocument <DEFAULT_DOC_SIZE> init_doc(StaticJsonDocument<DEFAULT_DOC_SIZE> doc) {
   doc["header"]["DEVICE_TYPE"] = DEVICE_TYPE;
   doc["header"]["POWER_SOURCE"] = POWER_SOURCE;
   doc["header"]["DEVICE_ID"] = DEVICE_ID;
+  doc["peers"]["hub"]="";
   doc["data"]["temp"] = FILLER_VAL;
   doc["data"]["light"] = FILLER_VAL;
+  
   return doc;
   }
 
@@ -52,6 +129,20 @@ StaticJsonDocument <200> decode_espnow_message (const uint8_t message){
   deserializeJson(out_doc, message_str);
   return out_doc;
   }
+
+int count_slaves(esp_now_peer_info_t* slaves){
+  int slave_count=0;
+  bool count_finished=false;
+  for (int i = 0; i < NUMSLAVES; i++) {
+    int zero_combo=0;
+    if (esp_now_is_peer_exist(slaves[i].peer_addr)){
+        slave_count++;
+      }
+//    else{return slave_count;}
+  }
+  return slave_count;
+}
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,18 +177,7 @@ void configDeviceAP() {
   }
 }
 
-int count_slaves(esp_now_peer_info_t* slaves){
-  int slave_count=0;
-  bool count_finished=false;
-  for (int i = 0; i < NUMSLAVES; i++) {
-    int zero_combo=0;
-    if (esp_now_is_peer_exist(slaves[i].peer_addr)){
-        slave_count++;
-      }
-//    else{return slave_count;}
-  }
-  return slave_count;
-}
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // modified from the espnow examples
@@ -203,13 +283,13 @@ void manageSlave(esp_now_peer_info_t* slaves) {
 }
 
 // send data
-void sendData(esp_now_peer_info_t* slaves, const uint8_t mac_addr, String package) {
+void sendData(const uint8_t *mac_addr, String package) {
   
     Serial.print("Sending: ");
     Serial.println(package);
   //encode the string package
   const uint8_t* encoded_package = reinterpret_cast<const uint8_t*>(package.c_str());  
-  esp_err_t result = esp_now_send(&mac_addr, encoded_package, sizeof(encoded_package));
+  esp_err_t result = esp_now_send(mac_addr, encoded_package, sizeof(encoded_package));
   Serial.print("Send Status: ");
   if (result == ESP_OK) {
     Serial.println("Success");
@@ -229,3 +309,5 @@ void sendData(esp_now_peer_info_t* slaves, const uint8_t mac_addr, String packag
     }
     delay(100);
 }
+/////////////////////////////////////////////////////////
+//
