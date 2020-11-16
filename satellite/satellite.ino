@@ -4,10 +4,6 @@ int resend_counter=0;
 StaticJsonDocument<EEPROM_SIZE> eeprom_doc;
 
 
-
-
-
-
 StaticJsonDocument<DEFAULT_DOC_SIZE> data_json;
 void setup() {
   Serial.begin(115200);
@@ -98,9 +94,11 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
     data_json["peers"]["hub"] = message_doc["header"];
   }
 
-  if (message_doc["command"]=="A"){
-//    Do A    
-  } else if (message_doc["command"]=="A"){
+  String command = message_doc["command"];
+  
+  if (command.indexOf("sleep")>=0){
+    sleep(extract_uint(message_doc["command"]));
+  } else if (command.indexOf("B")>=0){
 //    Do B
   } else {
 //    some thing went wrong, ask for clarification  

@@ -143,7 +143,30 @@ int count_slaves(esp_now_peer_info_t* slaves){
   return slave_count;
 }
 
+int extract_uint (String str) {
+  char charBuf[str.length()+1];
+  str.toCharArray(charBuf, str.length()+1);
 
+  String out_int = "";
+  bool active = false;
+  
+  for (int i=0; i<str.length()+1; i++ ){
+     if (isDigit(charBuf[i])){
+        out_int+=charBuf[i];
+        active = true;
+      } else {
+        if (active){
+            return out_int.toInt();
+          }
+      }
+    }
+  return -1;
+}
+
+void sleep (int seconds_to_sleep) {
+  esp_sleep_enable_timer_wakeup(seconds_to_sleep * 1000000);
+  esp_deep_sleep_start();
+  }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 //from espnow examples:
