@@ -49,9 +49,15 @@ String package_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
   }
 
 bool check_package_hash (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
-  if (hash(json_doc["json"])!=json_doc["hash"]){
+  Serial.println();
+  Serial.print("Calc. hash: "); Serial.println(hash(json_doc["json"]));
+  Serial.print("Inc, hash: "); serializeJson(json_doc["hash"], Serial); Serial.println();
+  Serial.println();
+  
+  if (String(hash(json_doc["json"]))!=(json_doc["hash"]).as<String>()){
       return false;    
     }
+  Serial.println("hash matched");
   return true; 
     
   }
@@ -76,30 +82,40 @@ void command_clarification (uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SI
   
 StaticJsonDocument<DEFAULT_DOC_SIZE> unpackage_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
   StaticJsonDocument <DEFAULT_DOC_SIZE> out_doc;
+  Serial.print("Deserialize: ");
   deserializeJson(out_doc, json_doc["json"]);
   return out_doc; 
   }
 
-void write_doc_to_EEPROM(int address, StaticJsonDocument<EEPROM_SIZE> eeprom_json_doc){
+void write_doc_to_EEPROM(unsigned long address, StaticJsonDocument<EEPROM_SIZE> eeprom_json_doc){
+  Serial.println("executing read_doc_from_EEPROM......");
   String eeprom_str;
   serializeJson(eeprom_json_doc, eeprom_str);
+  address = address + 0x3f000000;
+  unsigned long eeprom_size = EEPROM_SIZE;
   
-  for(int i=0;i<EEPROM_SIZE;i++)
+  Serial.print("EEPROM Start Address: ");Serial.println(address);
+  Serial.print("EEPROM End Address: ");Serial.println(eeprom_size);
+  
+  for(int i=0;i<eeprom_size;i++)
   {
     EEPROM.write(address+i, eeprom_str[i]);
   }
-  EEPROM.write(address + EEPROM_SIZE,'\0');
+  EEPROM.write(address + eeprom_size,'\0');
   EEPROM.commit();
 }
 
 
-StaticJsonDocument<EEPROM_SIZE> read_doc_from_EEPROM(int address)
+StaticJsonDocument<EEPROM_SIZE> read_doc_from_EEPROM(unsigned long address)
 {
+  Serial.println("executing read_doc_from_EEPROM......");
   char eeprom_str[EEPROM_SIZE];
   int i=0;
   unsigned char k;
+  address = address + 0x3f000000;
+  unsigned long eeprom_size = EEPROM_SIZE;
   k = EEPROM.read(address);
-  while(k != '\0' && i < EEPROM_SIZE){
+  while(k != '\0' && i < eeprom_size){
     k = EEPROM.read(address + i);
     eeprom_str[i] = k;
     i++;
@@ -123,19 +139,31 @@ StaticJsonDocument <DEFAULT_DOC_SIZE> init_doc(StaticJsonDocument<DEFAULT_DOC_SI
   return doc;
   }
 
-StaticJsonDocument <200> decode_espnow_message (const uint8_t message){
+StaticJsonDocument <200> decode_espnow_message (const uint8_t* message, int message_len){
+  Serial.println("decode_espnow_message...");
   StaticJsonDocument <200> out_doc;
-  String message_str((char*) message);
+  Serial.println("message_str...");
+//  Serial.println(message);
+
+  char* message_char[message_len];
+  *message_char = (char*) message;  
+  String message_str;
+  message_str = *message_char;
+  Serial.println(message_str);
+  Serial.print("message_str: ");Serial.println(message_str);
+  Serial.println("deserializeJson...");
   deserializeJson(out_doc, message_str);
   return out_doc;
   }
 
-int count_slaves(esp_now_peer_info_t* slaves){
+int count_slaves(esp_now_peer_info_t *slaves){
   int slave_count=0;
   bool count_finished=false;
   for (int i = 0; i < NUMSLAVES; i++) {
     int zero_combo=0;
-    if (esp_now_is_peer_exist(slaves[i].peer_addr)){
+//    Serial.println(*slaves[i].peer_addr);
+//    if (esp_now_is_peer_exist(slaves[i].peer_addr)){
+    if ((*slaves[i].peer_addr) != 0){
         slave_count++;
       }
 //    else{return slave_count;}
@@ -308,10 +336,29 @@ void manageSlave(esp_now_peer_info_t* slaves) {
 // send data
 void sendData(const uint8_t *mac_addr, String package) {
   
-    Serial.print("Sending: ");
-    Serial.println(package);
+  Serial.print("Sending: ");
+  Serial.println(package);
   //encode the string package
-  const uint8_t* encoded_package = reinterpret_cast<const uint8_t*>(package.c_str());  
+  int str_len = package.length() + 1;
+  char package_char_array[str_len];
+  package.toCharArray(package_char_array, str_len);
+//  uint8_t* encoded_package[str_len] = {reinterpret_cast<const uint8_t*>(package.c_str())};  
+
+  uint8_t encoded_package[str_len] = {};
+//  encoded_package = (uint8_t*) &package_char_array;
+//  memcpy(&encoded_package, &package_char_array, str_len);
+  for (int i = 0; i < str_len; i++) {
+    encoded_package[i] = (uint8_t)(package_char_array[i]);
+  }
+//  Serial.print("package_char_array: "); Serial.println(package_char_array);
+//  Serial.print("encoded_package: "); Serial.println((char*) encoded_package);
+  Serial.print("Sending to mac_addr : "); 
+  Serial.print(mac_addr[0]);Serial.print(":");
+  Serial.print(mac_addr[1]);Serial.print(":");
+  Serial.print(mac_addr[2]);Serial.print(":");
+  Serial.print(mac_addr[3]);Serial.print(":");
+  Serial.print(mac_addr[4]);Serial.print(":");
+  Serial.print(mac_addr[5]);Serial.println("");
   esp_err_t result = esp_now_send(mac_addr, encoded_package, sizeof(encoded_package));
   Serial.print("Send Status: ");
   if (result == ESP_OK) {

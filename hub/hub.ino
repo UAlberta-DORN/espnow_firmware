@@ -36,7 +36,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
            
   StaticJsonDocument<DEFAULT_DOC_SIZE> message_doc;
-  message_doc=decode_espnow_message(*data);
+  message_doc=decode_espnow_message(data, data_len);
   
   if (resend_counter==0){
       resend_counter = 10;
@@ -77,26 +77,37 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 
 esp_now_peer_info_t slaves[NUMSLAVES] = {};
 int SlaveCnt = 0; 
-
+int loop_counter =0;
 void loop() {
+  Serial.print("Loop number "); Serial.println(loop_counter);
   // In the loop we scan for slave
-  slaves[NUMSLAVES]=ScanForSlave();
+  *slaves = ScanForSlave();
   // If Slave is found, it would be populate in `slave` variable
   // We will check if `slave` is defined and then we proceed further
   SlaveCnt=count_slaves(slaves);
   // TODO: implement eeprom 
-  
-  if (SlaveCnt > 0) { // check if slave channel is defined
+  Serial.print("Found "); Serial.print(SlaveCnt); Serial.println(" slave(s)");
+  Serial.print("Slave addr = "); Serial.println(*(slaves[0].peer_addr));
+  if (SlaveCnt > 0 & loop_counter>1) { // check if slave channel is defined
+    loop_counter = 0;
     // `slave` is defined
     // Add slave as peer if it has not been added already
     manageSlave(slaves);
     // pair success or already paired
     // Send data to device
-    sendData(0,"test" );
+    for (int i = 0; i < SlaveCnt; i++) {
+      data_json["command"] = "Callback";
+      uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0xF4, 0x06, 0x69};
+//      Serial.print("Sending commands to: "); Serial.println(*(slaves[i].peer_addr));
+//      sendData(slaves[i].peer_addr, package_json(data_json));
+
+      Serial.print("Sending commands to: "); Serial.println(*(broadcastAddress));
+      sendData(slaves[i].peer_addr, package_json(data_json));
+      Serial.println("Commands sent");
+    }
   } else {
     // No slave found to process
   }
 
-  // wait for 3seconds to run the logic again
-  delay(1000);
+  loop_counter++;
 }
