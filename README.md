@@ -23,7 +23,7 @@ This is a sample of what will be sent to the Raspberry Pi:
 ```yaml
 {
   "header": {
-    "DEVICE_TYPE": 1,
+    "DEVICE_TYPE":0,
     "POWER_SOURCE": 0,
     "DEVICE_ID": "5A:9E:AD:F5:06:69"
   },
