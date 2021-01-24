@@ -223,29 +223,6 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
     }
   }
   
-  String command = message_doc["command"].as<String>();
-  
-  if (command.indexOf("sleep")>=0){
-    sleep(extract_uint(message_doc["command"]));
-  } else if (command.indexOf("B")>=0){
-//    Do B
-  } else if (command.indexOf("Pair")>=0){
-      data_json["peers"]["hub"]["DEVICE_ID"] = message_doc["header"]["DEVICE_ID"];
-      eeprom_doc=data_json;
-      write_doc_to_EEPROM(0, eeprom_doc);
-  } else if (command.indexOf("Callback")>=0){
-      data_json["command"] = "Callback";
-      Serial.print("Sending commands to: "); Serial.println(*mac_addr);
-      sendData(peerInfo.peer_addr, package_json(data_json));
-      Serial.println("Commands sent");
-  } else {
-//    some thing went wrong, ask for clarification  
-    Serial.print("Cannot understand command: "); 
-//    Serial.println(message_doc["command"]);
-
-    uint8_t mac_addr = data_json["peers"]["hub"]["DEVICE_ID"];
-    command_clarification(&mac_addr,data_json);
-  }
   write_doc_to_EEPROM(0, data_json);
   Serial.println("Written Doc to EEPROM");
   eeprom_doc=read_doc_from_EEPROM(0);
@@ -266,9 +243,32 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   Serial.print(hub_mac_addr[4]);Serial.print(":");
   Serial.print(hub_mac_addr[5]);Serial.println("");
   
-  Serial.println("Going to sleep");
-  esp_sleep_enable_timer_wakeup(1000);
-  esp_deep_sleep_start();
+  String command = message_doc["command"].as<String>();
+  if (command.indexOf("Sleep")>=0){
+    int sleep_duration = extract_uint(message_doc["command"]);
+    if (sleep_duration < 0){
+      sleep_duration = DEFAULT_SLEEP_DURATION;
+      }
+    sleep(sleep_duration);
+    
+  } else if (command.indexOf("B")>=0){
+//    Do B
+  } else if (command.indexOf("Pair")>=0){
+      data_json["peers"]["hub"]["DEVICE_ID"] = message_doc["header"]["DEVICE_ID"];
+      eeprom_doc=data_json;
+      write_doc_to_EEPROM(0, eeprom_doc);
+  } else if (command.indexOf("Callback")>=0){
+      data_json["command"] = "Callback";
+      Serial.print("Sending commands to: "); Serial.println(*mac_addr);
+      sendData(peerInfo.peer_addr, package_json(data_json));
+      Serial.println("Commands sent");
+  } else {
+//    some thing went wrong, ask for clarification  
+    Serial.print("Cannot understand command: "); 
+//    Serial.println(message_doc["command"]);
+
+    command_clarification(mac_addr,data_json);
+  }
 }
 
 // callback when data is sent from Master to Slave
@@ -278,8 +278,6 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
   Serial.print("Last Packet Sent to: "); Serial.println(macStr);
   Serial.print("Last Packet Send Status: "); Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
-
-  
   
 }
 

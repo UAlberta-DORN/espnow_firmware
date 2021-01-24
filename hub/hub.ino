@@ -97,7 +97,7 @@ void loop() {
     // pair success or already paired
     // Send data to device
     for (int i = 0; i < SlaveCnt; i++) {
-      data_json["command"] = "Callback";
+      data_json["command"] = "Sleep10";
       uint8_t broadcastAddress[] = {0x7C, 0x9E, 0xBD, 0xF4, 0x06, 0x69};
 //      Serial.print("Sending commands to: "); Serial.println(*(slaves[i].peer_addr));
 //      sendData(slaves[i].peer_addr, package_json(data_json));

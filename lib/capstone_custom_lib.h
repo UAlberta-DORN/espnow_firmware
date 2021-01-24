@@ -71,7 +71,7 @@ void ask_for_resend (const uint8_t *mac_addr, DynamicJsonDocument json_doc){
 
   }
   
-void command_clarification (uint8_t *mac_addr, DynamicJsonDocument json_doc){
+void command_clarification (const uint8_t *mac_addr, DynamicJsonDocument json_doc){
   json_doc["command"]="command_clarification";
   String package;
   package = package_json (json_doc);
@@ -206,7 +206,8 @@ int extract_uint (String str) {
 }
 
 void sleep (int seconds_to_sleep) {
-  esp_sleep_enable_timer_wakeup(seconds_to_sleep * 1000000);
+  Serial.print("Going to sleep for ");Serial.print(seconds_to_sleep);Serial.println(" seconds");
+  esp_sleep_enable_timer_wakeup(seconds_to_sleep*1000*1000);
   esp_deep_sleep_start();
   }
 
