@@ -32,11 +32,11 @@ void sendData(const uint8_t *mac_addr, String package);
 String type_of(uint8_t a) { return "uint8_t"; }
 //String type_of(const uint8_t a) { return "uint8_t"; }
 
-String package_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+String package_json (DynamicJsonDocument json_doc){
   String json_str;
   String packed_package;
   unsigned long json_hash;
-  StaticJsonDocument<DEFAULT_DOC_SIZE> package;
+  DynamicJsonDocument package(DEFAULT_DOC_SIZE);
   
   serializeJson(json_doc, json_str);
   json_hash=hash(json_str);
@@ -48,7 +48,7 @@ String package_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
   
   }
 
-bool check_package_hash (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+bool check_package_hash (DynamicJsonDocument json_doc){
   Serial.println();
   Serial.print("Calc. hash: "); Serial.println(hash(json_doc["json"]));
   Serial.print("Inc, hash: "); serializeJson(json_doc["hash"], Serial); Serial.println();
@@ -62,7 +62,7 @@ bool check_package_hash (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
     
   }
   
-void ask_for_resend (const uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+void ask_for_resend (const uint8_t *mac_addr, DynamicJsonDocument json_doc){
   json_doc["command"]="resend";
   String package;
   package = package_json (json_doc);
@@ -71,7 +71,7 @@ void ask_for_resend (const uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SIZ
 
   }
   
-void command_clarification (uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
+void command_clarification (uint8_t *mac_addr, DynamicJsonDocument json_doc){
   json_doc["command"]="command_clarification";
   String package;
   package = package_json (json_doc);
@@ -80,19 +80,19 @@ void command_clarification (uint8_t *mac_addr, StaticJsonDocument<DEFAULT_DOC_SI
 
   }
   
-StaticJsonDocument<DEFAULT_DOC_SIZE> unpackage_json (StaticJsonDocument<DEFAULT_DOC_SIZE> json_doc){
-  StaticJsonDocument <DEFAULT_DOC_SIZE> out_doc;
+DynamicJsonDocument unpackage_json (DynamicJsonDocument json_doc){
+  DynamicJsonDocument out_doc(DEFAULT_DOC_SIZE);
   Serial.print("Deserialize: ");
   deserializeJson(out_doc, json_doc["json"]);
   return out_doc; 
   }
 
-void write_doc_to_EEPROM(unsigned long address, StaticJsonDocument<EEPROM_SIZE> eeprom_json_doc){
-  Serial.println("executing read_doc_from_EEPROM......");
+void write_doc_to_EEPROM(unsigned long address, DynamicJsonDocument eeprom_json_doc){
+  Serial.println("executing write_doc_to_EEPROM......");
   String eeprom_str;
   serializeJson(eeprom_json_doc, eeprom_str);
-  address = address + 0x3f000000;
-  unsigned long eeprom_size = EEPROM_SIZE;
+  address = address;
+  unsigned long eeprom_size = EEPROM_SIZE - 1;
   
   Serial.print("EEPROM Start Address: ");Serial.println(address);
   Serial.print("EEPROM End Address: ");Serial.println(eeprom_size);
@@ -100,35 +100,49 @@ void write_doc_to_EEPROM(unsigned long address, StaticJsonDocument<EEPROM_SIZE> 
   for(int i=0;i<eeprom_size;i++)
   {
     EEPROM.write(address+i, eeprom_str[i]);
+//    delay(100);
+//    Serial.println("");
+//    Serial.print(address+i);
+//    Serial.print(" : ");
+//    Serial.print(eeprom_str[i]);
+//    Serial.println("");
   }
   EEPROM.write(address + eeprom_size,'\0');
   EEPROM.commit();
 }
 
 
-StaticJsonDocument<EEPROM_SIZE> read_doc_from_EEPROM(unsigned long address)
+DynamicJsonDocument read_doc_from_EEPROM(unsigned long address)
 {
   Serial.println("executing read_doc_from_EEPROM......");
   char eeprom_str[EEPROM_SIZE];
   int i=0;
   unsigned char k;
-  address = address + 0x3f000000;
+  address = address;
   unsigned long eeprom_size = EEPROM_SIZE;
   k = EEPROM.read(address);
-  while(k != '\0' && i < eeprom_size){
+  eeprom_str[i] = byte(k);
+  Serial.print(k);
+  while(i < eeprom_size - 1){
     k = EEPROM.read(address + i);
-    eeprom_str[i] = k;
+    eeprom_str[i] = byte(k);
+//    Serial.println("");
+//    Serial.print(address+i);
+//    Serial.print(" : ");
+//    Serial.print(eeprom_str[i]);
+//    Serial.println("");
     i++;
+//    delay(100);
   }
   eeprom_str[i]='\0';
   
-  StaticJsonDocument<EEPROM_SIZE> eeprom_json_doc;
+  DynamicJsonDocument eeprom_json_doc(EEPROM_SIZE);
   deserializeJson(eeprom_json_doc, String(eeprom_str));
   
   return eeprom_json_doc;
 }
 
-StaticJsonDocument <DEFAULT_DOC_SIZE> init_doc(StaticJsonDocument<DEFAULT_DOC_SIZE> doc) {
+DynamicJsonDocument init_doc(DynamicJsonDocument doc) {
   doc["header"]["DEVICE_TYPE"] = DEVICE_TYPE;
   doc["header"]["POWER_SOURCE"] = POWER_SOURCE;
   doc["header"]["DEVICE_ID"] = DEVICE_ID;
@@ -139,9 +153,9 @@ StaticJsonDocument <DEFAULT_DOC_SIZE> init_doc(StaticJsonDocument<DEFAULT_DOC_SI
   return doc;
   }
 
-StaticJsonDocument <200> decode_espnow_message (const uint8_t* message, int message_len){
+DynamicJsonDocument decode_espnow_message (const uint8_t* message, int message_len){
   Serial.println("decode_espnow_message...");
-  StaticJsonDocument <200> out_doc;
+  DynamicJsonDocument out_doc(DEFAULT_DOC_SIZE);
   Serial.println("message_str...");
 //  Serial.println(message);
 

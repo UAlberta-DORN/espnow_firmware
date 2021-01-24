@@ -2,13 +2,13 @@
 #include <custom_capstone_lib.h>
 
 int resend_counter=0;
-StaticJsonDocument<DEFAULT_DOC_SIZE> data_json;
+DynamicJsonDocument data_json(DEFAULT_DOC_SIZE);
 
 void setup() {
   Serial.begin(115200);
   Serial.println("Hub:");
   //Set device in STA mode to begin with
-  WiFi.mode(WIFI_STA);
+  WiFi.mode(WIFI_AP);
 
   // This is the mac address of the Master in Station Mode
   Serial.print("STA MAC: "); Serial.println(WiFi.macAddress());
@@ -31,11 +31,12 @@ void setup() {
   
 // callback when data is recv from Master
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+  Serial.println("Data Recived!");Serial.println("Data Recived!");Serial.println("Data Recived!");Serial.println("Data Recived!");
   char macStr[18];
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
            
-  StaticJsonDocument<DEFAULT_DOC_SIZE> message_doc;
+  DynamicJsonDocument message_doc(400);
   message_doc=decode_espnow_message(data, data_len);
   
   if (resend_counter==0){
@@ -88,7 +89,7 @@ void loop() {
   // TODO: implement eeprom 
   Serial.print("Found "); Serial.print(SlaveCnt); Serial.println(" slave(s)");
   Serial.print("Slave addr = "); Serial.println(*(slaves[0].peer_addr));
-  if (SlaveCnt > 0 & loop_counter>1) { // check if slave channel is defined
+  if (SlaveCnt > 0 & loop_counter>5) { // check if slave channel is defined
     loop_counter = 0;
     // `slave` is defined
     // Add slave as peer if it has not been added already
