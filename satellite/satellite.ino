@@ -1,5 +1,6 @@
-//#include "capstone_settings.h" // we can include a setting file specially made for this script, else compliler will use the default settings
+#include "satellite_config.h" // we can include a setting file specially made for this script, else compliler will use the default settings
 #include <custom_capstone_lib.h>
+
 int resend_counter=10;
 
 //StaticJsonDocument<EEPROM_SIZE> eeprom_doc;
@@ -15,6 +16,7 @@ DynamicJsonDocument data_json(DEFAULT_DOC_SIZE);
 //StaticJsonDocument<DEFAULT_DOC_SIZE> data_json;
 
 esp_now_peer_info_t peerInfo;
+bool hub_paired = false;
 
 void setup() {
   Serial.begin(115200);
@@ -102,6 +104,7 @@ void setup() {
     }
     else {
       Serial.println("Hub added as peer at start up");
+      hub_paired = true;
       }
   }
   
@@ -135,7 +138,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
            
 //  StaticJsonDocument<400> message_doc;
-  DynamicJsonDocument message_doc(400);
+  DynamicJsonDocument message_doc(DEFAULT_DOC_SIZE);
   
   message_doc=decode_espnow_message(data, data_len);
   Serial.print("message_doc: ");
@@ -185,7 +188,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
     Serial.println("");
     resend_counter = 10;
    }  
-  if (message_doc["header"]["DEVICE_TYPE"]==0){
+  if (message_doc["header"]["DEVICE_TYPE"]==0 && hub_paired == false){
     data_json["peers"]["hub"] = message_doc["header"];
     eeprom_doc=data_json;
     write_doc_to_EEPROM(0, eeprom_doc);
@@ -266,7 +269,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 //    some thing went wrong, ask for clarification  
     Serial.print("Cannot understand command: "); 
 //    Serial.println(message_doc["command"]);
-
+ 
     command_clarification(mac_addr,data_json);
   }
 }
