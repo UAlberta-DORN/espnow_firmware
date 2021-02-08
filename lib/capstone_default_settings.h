@@ -8,4 +8,4 @@
 #define NUMSLAVES 20
 #define PRINTSCANRESULTS 0
 #define DEFAULT_SLEEP_DURATION 60
-#define DEBUG false
+#define DEBUG true

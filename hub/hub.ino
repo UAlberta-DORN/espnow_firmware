@@ -19,7 +19,7 @@ void setup() {
   data_json=init_doc(data_json);
 
   serializeJson(data_json, Serial);
-  printlnd();
+  Serial.println();
   
   // Init ESPNow with a fallback logic
   InitESPNow();
@@ -39,7 +39,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
            
   DynamicJsonDocument message_doc(400);
-    message_doc=decode_espnow_message(data, data_len);
+  message_doc=decode_espnow_message(data, data_len);
   printd("message_doc: ");
   json_printd(message_doc);
   printlnd();
@@ -84,6 +84,8 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
     printlnd("");
     json_printd(message_doc["header"]["DEVICE_ID"]);
     printlnd("");
+    printlnd("Message Data:");
+    json_printd(message_doc["data"]);
     resend_counter = 10;
    }  
    
@@ -93,10 +95,15 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 
   if (sender_device_type == 0){
   //    Should not be talking to another hub
-  } else if (sender_device_type == 1){
+  } else if (sender_device_type != 0){
   //    Devices are sensors, save the data
-      data_json["children"][sender_DEVICE_ID]["header"] = message_doc["header"];
-      data_json["children"][sender_DEVICE_ID]["data"] = message_doc["data"];
+      printlnd("Updating the children data...");
+      data_json["children"][sender_DEVICE_ID]["header"]["DEVICE_TYPE"] = sender_device_type;
+      data_json["children"][sender_DEVICE_ID]["header"]["DEVICE_ID"] = sender_DEVICE_ID;
+      data_json["children"][sender_DEVICE_ID]["header"]["POWER_SOURCE"] = message_doc["header"]["POWER_SOURCE"].as<String>();
+      data_json["children"][sender_DEVICE_ID]["data"]["temp"] = message_doc["data"]["temp"].as<float>();
+      data_json["children"][sender_DEVICE_ID]["data"]["light"] = message_doc["data"]["light"].as<float>();
+      
       data_json["children"][sender_DEVICE_ID]["data"]["timestamp"] = millis();
 
       printlnd("current data_json:");
@@ -123,7 +130,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
  
     command_clarification(mac_addr,data_json);
   }
-
+  
 }
 
 // callback when data is sent from Master to Slave
@@ -140,7 +147,6 @@ int SlaveCnt = 0;
 int loop_counter = 0;
 int push_counter = 0;
 void loop() {
-  data_json["header"]["LOCAL_TIME"] = millis();
   printd("Loop number "); printlnd(loop_counter);
   // In the loop we scan for slave
   *slaves = ScanForSlave();
@@ -169,7 +175,9 @@ void loop() {
   } else {
     // No slave found to process
   }
-  if (push_counter>5){
+  if (push_counter>0){
+    data_json["header"]["LOCAL_TIME"] = millis();
+    printlnd("Push this to RPi:");
     serializeJson(data_json, Serial);Serial.println("");
     push_counter=0;
     }
