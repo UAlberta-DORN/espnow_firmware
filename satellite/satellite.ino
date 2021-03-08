@@ -19,6 +19,7 @@ esp_now_peer_info_t peerInfo;
 bool hub_paired = false;
 
 void setup() {
+  delay(10);
   Serial.begin(115200);
   
   data_json=init_doc(data_json);

@@ -85,13 +85,102 @@ void command_clarification (const uint8_t *mac_addr, DynamicJsonDocument json_do
   sendData(mac_addr,package);
 
   }
+
+void mac_addr_decode(String addr_str, uint8_t addr_arr[6]) {
+  char str[addr_str.length()+1];
+  addr_str.toCharArray(str, addr_str.length()+1);
+  char* ptr;
   
+  addr_arr[0] = strtol( strtok(str,":"), &ptr, HEX );
+  for( int i = 1; i < 6; i++ ){
+    addr_arr[i] = strtol( strtok( NULL,":"), &ptr, HEX );
+    }
+}
+
+bool add_peer (uint8_t mac_addr[6]){
+  Serial.print("processing mac_addr:");Serial.println(mac_addr[5]);
+  esp_now_peer_info_t peerInfo;
+  memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
+  memcpy(peerInfo.peer_addr, &mac_addr, sizeof(uint8_t[6]));
+  peerInfo.ifidx = ESP_IF_WIFI_AP;
+  peerInfo.channel = CHANNEL;
+  peerInfo.encrypt = false;
+//  esp_err_t add_peer_status = esp_now_add_peer(&peerInfo);
+//  
+//  if (add_peer_status != ESP_OK || add_peer_status != ESP_ERR_ESPNOW_EXIST){
+//    Serial.println("Failed to add peer");
+//    Serial.println(add_peer_status);
+//    return false;
+//  }
+//  else {
+//    Serial.println("Device Paired");
+//    return true;
+//  }
+  bool exists = esp_now_is_peer_exist(peerInfo.peer_addr);
+  if (exists) {
+    // Slave already paired.
+    printlnd("Already Paired");
+  } else {
+    // Slave not paired, attempt pair
+    esp_err_t addStatus = esp_now_add_peer(&peerInfo);
+    if (addStatus == ESP_OK) {
+      // Pair success
+      printlnd("Pair success");
+      return true;
+    } else if (addStatus == ESP_ERR_ESPNOW_NOT_INIT) {
+      // How did we get so far!!
+      printlnd("ESPNOW Not Init");
+    } else if (addStatus == ESP_ERR_ESPNOW_ARG) {
+      printlnd("Add Peer - Invalid Argument");
+    } else if (addStatus == ESP_ERR_ESPNOW_FULL) {
+      printlnd("Peer list full");
+    } else if (addStatus == ESP_ERR_ESPNOW_NO_MEM) {
+      printlnd("Out of memory");
+    } else if (addStatus == ESP_ERR_ESPNOW_EXIST) {
+      printlnd("Peer Exists");
+    } else {
+      printlnd("Not sure what happened");
+    }
+    return false;
+    delay(100);
+  }
+}
+
+
+
 DynamicJsonDocument unpackage_json (DynamicJsonDocument json_doc){
   DynamicJsonDocument out_doc(DEFAULT_DOC_SIZE);
   printd("Deserialize: ");
   deserializeJson(out_doc, json_doc["json"]);
   return out_doc; 
   }
+
+void process_rpi_command (DynamicJsonDocument rpi_command, DynamicJsonDocument data_json){
+    for (int i=0;i<rpi_command.size();i++){
+      Serial.print("i=");Serial.println(i);
+      Serial.print("rpi_command[i]['id'].size()=");Serial.println(rpi_command[i]["id"].size());
+      String command = rpi_command[i]["command"].as<String>();
+      data_json["command"] = command;
+      for (int j=0;j<rpi_command[i]["id"].size();j++){
+          Serial.print("j=");Serial.println(j);
+          uint8_t mac_addr[6];
+          mac_addr_decode(rpi_command[i]["id"][j], mac_addr);
+          //  Serial.println(*hub_mac_addr);
+          Serial.print("Hub MAC address: ");
+          Serial.print(mac_addr[0]);Serial.print(":");
+          Serial.print(mac_addr[1]);Serial.print(":");
+          Serial.print(mac_addr[2]);Serial.print(":");
+          Serial.print(mac_addr[3]);Serial.print(":");
+          Serial.print(mac_addr[4]);Serial.print(":");
+          Serial.print(mac_addr[5]);Serial.println("");
+
+          add_peer(mac_addr);
+          
+          sendData(mac_addr, package_json(data_json));
+          data_json["command"] = "";
+      }
+   }
+}
 
 void write_doc_to_EEPROM(unsigned long address, DynamicJsonDocument eeprom_json_doc){
   printlnd("executing write_doc_to_EEPROM......");
