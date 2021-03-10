@@ -97,11 +97,11 @@ void mac_addr_decode(String addr_str, uint8_t addr_arr[6]) {
     }
 }
 
-bool add_peer (uint8_t mac_addr[6]){
+bool add_peer (uint8_t mac_addr[6], esp_now_peer_info_t peerInfo){
   Serial.print("processing mac_addr:");Serial.println(mac_addr[5]);
-  esp_now_peer_info_t peerInfo;
+//  esp_now_peer_info_t peerInfo;
   memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
-  memcpy(peerInfo.peer_addr, &mac_addr, sizeof(uint8_t[6]));
+  memcpy(peerInfo.peer_addr, mac_addr, sizeof(uint8_t[6]));
   peerInfo.ifidx = ESP_IF_WIFI_AP;
   peerInfo.channel = CHANNEL;
   peerInfo.encrypt = false;
@@ -120,12 +120,17 @@ bool add_peer (uint8_t mac_addr[6]){
   if (exists) {
     // Slave already paired.
     printlnd("Already Paired");
+    return true;
   } else {
     // Slave not paired, attempt pair
     esp_err_t addStatus = esp_now_add_peer(&peerInfo);
     if (addStatus == ESP_OK) {
       // Pair success
       printlnd("Pair success");
+
+      bool exists = esp_now_is_peer_exist(peerInfo.peer_addr);
+      Serial.print("Status of peer:");Serial.println(exists);
+      
       return true;
     } else if (addStatus == ESP_ERR_ESPNOW_NOT_INIT) {
       // How did we get so far!!
@@ -142,7 +147,7 @@ bool add_peer (uint8_t mac_addr[6]){
       printlnd("Not sure what happened");
     }
     return false;
-    delay(100);
+    delay(50);
   }
 }
 
@@ -155,29 +160,33 @@ DynamicJsonDocument unpackage_json (DynamicJsonDocument json_doc){
   return out_doc; 
   }
 
-void process_rpi_command (DynamicJsonDocument rpi_command, DynamicJsonDocument data_json){
+void process_rpi_command (DynamicJsonDocument rpi_command, DynamicJsonDocument data_json, esp_now_peer_info_t peerInfo){
     for (int i=0;i<rpi_command.size();i++){
       Serial.print("i=");Serial.println(i);
       Serial.print("rpi_command[i]['id'].size()=");Serial.println(rpi_command[i]["id"].size());
       String command = rpi_command[i]["command"].as<String>();
-      data_json["command"] = command;
       for (int j=0;j<rpi_command[i]["id"].size();j++){
-          Serial.print("j=");Serial.println(j);
-          uint8_t mac_addr[6];
-          mac_addr_decode(rpi_command[i]["id"][j], mac_addr);
-          //  Serial.println(*hub_mac_addr);
-          Serial.print("Hub MAC address: ");
-          Serial.print(mac_addr[0]);Serial.print(":");
-          Serial.print(mac_addr[1]);Serial.print(":");
-          Serial.print(mac_addr[2]);Serial.print(":");
-          Serial.print(mac_addr[3]);Serial.print(":");
-          Serial.print(mac_addr[4]);Serial.print(":");
-          Serial.print(mac_addr[5]);Serial.println("");
+        data_json["command"] = command;
+        Serial.print("j=");Serial.println(j);
+        uint8_t mac_addr[6];
+        mac_addr_decode(rpi_command[i]["id"][j], mac_addr);
+//          uint8_t mac_addr[] = {0x7C, 0x9E, 0xBD, 0xF4, 0x06, 0x68};
+        //  Serial.println(*hub_mac_addr);
+        Serial.print("Target MAC address: ");
+        Serial.print(mac_addr[0]);Serial.print(":");
+        Serial.print(mac_addr[1]);Serial.print(":");
+        Serial.print(mac_addr[2]);Serial.print(":");
+        Serial.print(mac_addr[3]);Serial.print(":");
+        Serial.print(mac_addr[4]);Serial.print(":");
+        Serial.print(mac_addr[5]);Serial.println("");
 
-          add_peer(mac_addr);
-          
-          sendData(mac_addr, package_json(data_json));
-          data_json["command"] = "";
+        add_peer(mac_addr, peerInfo);
+        bool exists = esp_now_is_peer_exist(mac_addr);
+        Serial.print("Status of peer:");Serial.println(exists);
+        
+        sendData(mac_addr, package_json(data_json));
+        data_json["command"] = "";
+        delay(50);
       }
    }
 }
@@ -328,8 +337,8 @@ void InitESPNow() {
 // config AP SSID
 void configDeviceAP() {
   String Prefix = "Slave:";
-  String Mac = WiFi.macAddress();
-  String SSID = Prefix + Mac;
+  String Mac = DEVICE_ID;
+  String SSID = Prefix + DEVICE_ID;
   String Password = "123456789";
   bool result = WiFi.softAP(SSID.c_str(), Password.c_str(), CHANNEL, 0);
   if (!result) {

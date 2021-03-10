@@ -21,6 +21,18 @@ bool hub_paired = false;
 void setup() {
   delay(10);
   Serial.begin(115200);
+
+  // we need to broadcast ourselfs anyway
+  Serial.println("Satellite:");
+  // Set device in AP mode to begin with
+  WiFi.mode(WIFI_AP);
+  // configure device AP mode
+  configDeviceAP();
+  // This is the mac address of the device in AP Mode
+  Serial.print("AP MAC: "); Serial.println(WiFi.softAPmacAddress());
+
+  // Init ESPNow with a fallback logic
+  InitESPNow();
   
   data_json=init_doc(data_json);
   
@@ -61,20 +73,7 @@ void setup() {
   Serial.print(hub_mac_addr[3]);Serial.print(":");
   Serial.print(hub_mac_addr[4]);Serial.print(":");
   Serial.print(hub_mac_addr[5]);Serial.println("");
-  
-  // we need to broadcast ourselfs anyway
-  Serial.println("Satellite:");
-  // Set device in AP mode to begin with
-  WiFi.mode(WIFI_AP);
-  // configure device AP mode
-  configDeviceAP();
-  
-  // This is the mac address of the device in AP Mode
-  Serial.print("AP MAC: "); Serial.println(WiFi.macAddress());
-
-  
-  // Init ESPNow with a fallback logic
-  InitESPNow();
+ 
 
   
   if (data_json["hub_id"].is<int>() || (hub_mac_addr[0] == 0 && hub_mac_addr[1] == 0 && hub_mac_addr[2] == 0 && hub_mac_addr[3] == 0 && hub_mac_addr[4] == 0 && hub_mac_addr[5] == 0) ){

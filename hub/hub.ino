@@ -103,7 +103,7 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
       data_json["children"][sender_DEVICE_ID]["header"]["POWER_SOURCE"] = message_doc["header"]["POWER_SOURCE"].as<String>();
       data_json["children"][sender_DEVICE_ID]["data"]["temp"] = message_doc["data"]["temp"].as<float>();
       data_json["children"][sender_DEVICE_ID]["data"]["light"] = message_doc["data"]["light"].as<float>();
-      
+
       data_json["children"][sender_DEVICE_ID]["data"]["timestamp"] = millis();
 
       data_json["header"]["LOCAL_TIME"] = millis();
@@ -147,13 +147,14 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
 }
 
 esp_now_peer_info_t slaves[NUMSLAVES] = {};
+esp_now_peer_info_t peerInfo;
 int SlaveCnt = 0; 
 int loop_counter = 0;
 int push_counter = 0;
 int search_counter = 100;
 
 void loop() {
-  printd("Loop number "); printlnd(loop_counter);
+//  printd("Loop number "); printlnd(loop_counter);
   if (search_counter>10){
     // In the loop we scan for slave
     *slaves = ScanForSlave();
@@ -168,14 +169,14 @@ void loop() {
   }
   
   
-//  if (SlaveCnt > 0 & loop_counter>2) { // check if slave channel is defined
-//    loop_counter = 0;
-//    // `slave` is defined
-//    // Add slave as peer if it has not been added already
-//    manageSlave(slaves);
-//    // pair success or already paired
-//    // Send data to device
-//    for (int i = 0; i < SlaveCnt; i++) {
+  if (SlaveCnt > 0 & loop_counter>2) { // check if slave channel is defined
+    loop_counter = 0;
+    // `slave` is defined
+    // Add slave as peer if it has not been added already
+    manageSlave(slaves);
+    // pair success or already paired
+    // Send data to device
+    for (int i = 0; i < SlaveCnt; i++) {
 //      data_json["command"] = "Callback";
 ////      printd("Sending commands to: "); printlnd(*(slaves[i].peer_addr));
 ////      sendData(slaves[i].peer_addr, package_json(data_json));
@@ -184,10 +185,10 @@ void loop() {
 //      sendData(slaves[i].peer_addr, package_json(data_json));
 //      printlnd("Commands sent");
 //      data_json["command"] = "";
-//    }
-//  } else {
-//    // No slave found to process
-//  }
+    }
+  } else {
+    // No slave found to process
+  }
 
   // read input from RPi, and process/ act on the commands
   if (Serial.available()) {
@@ -196,18 +197,18 @@ void loop() {
     DynamicJsonDocument rpi_command(500);
     deserializeJson(rpi_command, inByte);
     Serial.println(rpi_command.size());
-    process_rpi_command(rpi_command, data_json);
+    process_rpi_command(rpi_command, data_json, slaves[0]);
   }
 
   // Every few rounds, send info to RPi
-  if (push_counter>=0){
+  if (push_counter>=10){
     printd("Current Time:");printd(millis());printlnd("");
     data_json["header"]["LOCAL_TIME"] = millis();
     printlnd("Push this to RPi:");
     serializeJson(data_json, Serial);Serial.println("");
     push_counter=0;
     }
-  printlnd("Loop End\n");
+//  printlnd("Loop End\n");
   loop_counter++;
   push_counter++;
   search_counter++;
