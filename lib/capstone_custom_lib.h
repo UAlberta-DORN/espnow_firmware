@@ -98,7 +98,7 @@ void mac_addr_decode(String addr_str, uint8_t addr_arr[6]) {
 }
 
 bool add_peer (uint8_t mac_addr[6], esp_now_peer_info_t peerInfo){
-  Serial.print("processing mac_addr:");Serial.println(mac_addr[5]);
+  printd("processing mac_addr:");printlnd(mac_addr[5]);
 //  esp_now_peer_info_t peerInfo;
   memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
   memcpy(peerInfo.peer_addr, mac_addr, sizeof(uint8_t[6]));
@@ -108,12 +108,12 @@ bool add_peer (uint8_t mac_addr[6], esp_now_peer_info_t peerInfo){
 //  esp_err_t add_peer_status = esp_now_add_peer(&peerInfo);
 //  
 //  if (add_peer_status != ESP_OK || add_peer_status != ESP_ERR_ESPNOW_EXIST){
-//    Serial.println("Failed to add peer");
-//    Serial.println(add_peer_status);
+//    printlnd("Failed to add peer");
+//    printlnd(add_peer_status);
 //    return false;
 //  }
 //  else {
-//    Serial.println("Device Paired");
+//    printlnd("Device Paired");
 //    return true;
 //  }
   bool exists = esp_now_is_peer_exist(peerInfo.peer_addr);
@@ -129,7 +129,7 @@ bool add_peer (uint8_t mac_addr[6], esp_now_peer_info_t peerInfo){
       printlnd("Pair success");
 
       bool exists = esp_now_is_peer_exist(peerInfo.peer_addr);
-      Serial.print("Status of peer:");Serial.println(exists);
+      printd("Status of peer:");printlnd(exists);
       
       return true;
     } else if (addStatus == ESP_ERR_ESPNOW_NOT_INIT) {
@@ -162,27 +162,27 @@ DynamicJsonDocument unpackage_json (DynamicJsonDocument json_doc){
 
 void process_rpi_command (DynamicJsonDocument rpi_command, DynamicJsonDocument data_json, esp_now_peer_info_t peerInfo){
     for (int i=0;i<rpi_command.size();i++){
-      Serial.print("i=");Serial.println(i);
-      Serial.print("rpi_command[i]['id'].size()=");Serial.println(rpi_command[i]["id"].size());
+      printd("i=");printlnd(i);
+      printd("rpi_command[i]['id'].size()=");printlnd(rpi_command[i]["id"].size());
       String command = rpi_command[i]["command"].as<String>();
       for (int j=0;j<rpi_command[i]["id"].size();j++){
         data_json["command"] = command;
-        Serial.print("j=");Serial.println(j);
+        printd("j=");printlnd(j);
         uint8_t mac_addr[6];
         mac_addr_decode(rpi_command[i]["id"][j], mac_addr);
 //          uint8_t mac_addr[] = {0x7C, 0x9E, 0xBD, 0xF4, 0x06, 0x68};
-        //  Serial.println(*hub_mac_addr);
-        Serial.print("Target MAC address: ");
-        Serial.print(mac_addr[0]);Serial.print(":");
-        Serial.print(mac_addr[1]);Serial.print(":");
-        Serial.print(mac_addr[2]);Serial.print(":");
-        Serial.print(mac_addr[3]);Serial.print(":");
-        Serial.print(mac_addr[4]);Serial.print(":");
-        Serial.print(mac_addr[5]);Serial.println("");
+        //  printlnd(*hub_mac_addr);
+        printd("Target MAC address: ");
+        printd(mac_addr[0]);printd(":");
+        printd(mac_addr[1]);printd(":");
+        printd(mac_addr[2]);printd(":");
+        printd(mac_addr[3]);printd(":");
+        printd(mac_addr[4]);printd(":");
+        printd(mac_addr[5]);printlnd("");
 
         add_peer(mac_addr, peerInfo);
         bool exists = esp_now_is_peer_exist(mac_addr);
-        Serial.print("Status of peer:");Serial.println(exists);
+        printd("Status of peer:");printlnd(exists);
         
         sendData(mac_addr, package_json(data_json));
         data_json["command"] = "";

@@ -1,10 +1,8 @@
-//#include "capstone_settings.h" // we can include a setting file specially made for this script, else compliler will use the default settings
+#include "hub_settings.h" // we can include a setting file specially made for this script, else compliler will use the default settings
 #include <custom_capstone_lib.h>
 
 int resend_counter=10;
 DynamicJsonDocument data_json(DEFAULT_DOC_SIZE);
-
-
 
 void setup() {
   Serial.begin(115200);
@@ -19,7 +17,7 @@ void setup() {
   data_json=init_doc(data_json);
 
   serializeJson(data_json, Serial);
-  Serial.println();
+  Serial.println("");
   
   // Init ESPNow with a fallback logic
   InitESPNow();
@@ -28,8 +26,6 @@ void setup() {
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
 }
-
-
   
 // callback when data is recv from Master
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
@@ -192,11 +188,13 @@ void loop() {
 
   // read input from RPi, and process/ act on the commands
   if (Serial.available()) {
+    printd("Time Commands Recived:");printlnd(millis());
+//    Serial.print("Time Commands Recived:");Serial.println(millis());
     String inByte = Serial.readString();
-    Serial.println(inByte);
+    printlnd(inByte);
     DynamicJsonDocument rpi_command(500);
     deserializeJson(rpi_command, inByte);
-    Serial.println(rpi_command.size());
+    printlnd(rpi_command.size());
     process_rpi_command(rpi_command, data_json, slaves[0]);
   }
 

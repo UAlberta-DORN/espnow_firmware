@@ -23,32 +23,32 @@ void setup() {
   Serial.begin(115200);
 
   // we need to broadcast ourselfs anyway
-  Serial.println("Satellite:");
+  printlnd("Satellite:");
   // Set device in AP mode to begin with
   WiFi.mode(WIFI_AP);
   // configure device AP mode
   configDeviceAP();
   // This is the mac address of the device in AP Mode
-  Serial.print("AP MAC: "); Serial.println(WiFi.softAPmacAddress());
+  printd("AP MAC: "); printlnd(WiFi.softAPmacAddress());
 
   // Init ESPNow with a fallback logic
   InitESPNow();
   
   data_json=init_doc(data_json);
   
-  serializeJson(data_json, Serial);
-  Serial.println();
+  json_printd(data_json, Serial);
+  printlnd();
   
   if (!EEPROM.begin(EEPROM_SIZE)) {
-    Serial.println("Failed to initialise EEPROM");
-    Serial.println("Restarting...");
+    printlnd("Failed to initialise EEPROM");
+    printlnd("Restarting...");
     delay(50);
     ESP.restart();
   }
 
   eeprom_doc=read_doc_from_EEPROM(0);
-  Serial.println("eeprom_doc is:");
-  serializeJson(eeprom_doc, Serial);Serial.println("");
+  printlnd("eeprom_doc is:");
+  json_printd(eeprom_doc, Serial);printlnd("");
   if (!eeprom_doc.containsKey("header")){
     eeprom_doc=data_json;
     write_doc_to_EEPROM(0, eeprom_doc);
@@ -57,7 +57,7 @@ void setup() {
     data_json["peers"]=eeprom_doc["peers"];
     data_json["hub_id"]=eeprom_doc["hub_id"];
     }
-  Serial.println("EEPROM Setup Finished");
+  printlnd("EEPROM Setup Finished");
   uint8_t hub_mac_addr[6] = {};
   hub_mac_addr[0] = data_json["hub_id"][0].as<unsigned int>();
   hub_mac_addr[1] = data_json["hub_id"][1].as<unsigned int>();
@@ -66,13 +66,13 @@ void setup() {
   hub_mac_addr[4] = data_json["hub_id"][4].as<unsigned int>();
   hub_mac_addr[5] = data_json["hub_id"][5].as<unsigned int>();
   
-  Serial.print("Hub MAC address: ");
-  Serial.print(hub_mac_addr[0]);Serial.print(":");
-  Serial.print(hub_mac_addr[1]);Serial.print(":");
-  Serial.print(hub_mac_addr[2]);Serial.print(":");
-  Serial.print(hub_mac_addr[3]);Serial.print(":");
-  Serial.print(hub_mac_addr[4]);Serial.print(":");
-  Serial.print(hub_mac_addr[5]);Serial.println("");
+  printd("Hub MAC address: ");
+  printd(hub_mac_addr[0]);printd(":");
+  printd(hub_mac_addr[1]);printd(":");
+  printd(hub_mac_addr[2]);printd(":");
+  printd(hub_mac_addr[3]);printd(":");
+  printd(hub_mac_addr[4]);printd(":");
+  printd(hub_mac_addr[5]);printlnd("");
  
 
   
@@ -80,13 +80,13 @@ void setup() {
 //  if (true){
 
   } else {
-    Serial.print("Hub MAC address: ");
-    Serial.print(hub_mac_addr[0]);Serial.print(":");
-    Serial.print(hub_mac_addr[1]);Serial.print(":");
-    Serial.print(hub_mac_addr[2]);Serial.print(":");
-    Serial.print(hub_mac_addr[3]);Serial.print(":");
-    Serial.print(hub_mac_addr[4]);Serial.print(":");
-    Serial.print(hub_mac_addr[5]);Serial.println("");
+    printd("Hub MAC address: ");
+    printd(hub_mac_addr[0]);printd(":");
+    printd(hub_mac_addr[1]);printd(":");
+    printd(hub_mac_addr[2]);printd(":");
+    printd(hub_mac_addr[3]);printd(":");
+    printd(hub_mac_addr[4]);printd(":");
+    printd(hub_mac_addr[5]);printlnd("");
     
     // Register peer
     memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
@@ -100,10 +100,10 @@ void setup() {
     
     // Add peer
     if (esp_now_add_peer(&peerInfo) != ESP_OK){
-      Serial.println("Failed to add peer");
+      printlnd("Failed to add peer");
     }
     else {
-      Serial.println("Hub added as peer at start up");
+      printlnd("Hub added as peer at start up");
       hub_paired = true;
       }
   }
@@ -113,27 +113,27 @@ void setup() {
   // get recv/send packer info.
   esp_now_register_recv_cb(OnDataRecv);
   esp_now_register_send_cb(OnDataSent);
-  Serial.print("freeMemory() after setup = ");
-  Serial.println(getAllHeap());
+  printd("freeMemory() after setup = ");
+  printlnd(getAllHeap());
 }
 
 
   
 // callback when data is recv from Master
 void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
-  Serial.print("freeMemory() OnDataRecv = ");
-  Serial.println(getAllHeap());
+  printd("freeMemory() OnDataRecv = ");
+  printlnd(getAllHeap());
   
-  Serial.println(*data);
-  Serial.println((char*) data);
+  printlnd(*data);
+  printlnd((char*) data);
   
   char macStr[18];
-  Serial.print(mac_addr[0]);Serial.print(":");
-  Serial.print(mac_addr[1]);Serial.print(":");
-  Serial.print(mac_addr[2]);Serial.print(":");
-  Serial.print(mac_addr[3]);Serial.print(":");
-  Serial.print(mac_addr[4]);Serial.print(":");
-  Serial.print(mac_addr[5]);Serial.println("");
+  printd(mac_addr[0]);printd(":");
+  printd(mac_addr[1]);printd(":");
+  printd(mac_addr[2]);printd(":");
+  printd(mac_addr[3]);printd(":");
+  printd(mac_addr[4]);printd(":");
+  printd(mac_addr[5]);printlnd("");
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
            
@@ -141,12 +141,12 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   DynamicJsonDocument message_doc(DEFAULT_DOC_SIZE);
   
   message_doc=decode_espnow_message(data, data_len);
-  Serial.print("message_doc: ");
-  serializeJson(message_doc, Serial);
-  Serial.println();
+  printd("message_doc: ");
+  json_printd(message_doc, Serial);
+  printlnd();
   String message = message_doc["json"].as<String>();
-  Serial.println(message);
-  Serial.println("Test 2");
+  printlnd(message);
+  printlnd("Test 2");
   
   if (resend_counter < 0){
       resend_counter = 10;
@@ -155,37 +155,37 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   if (resend_counter>0){
     if (check_package_hash(message_doc)){
         DeserializationError err =  deserializeJson(message_doc, message);
-        Serial.print("message_doc: ");
-        serializeJson(message_doc, Serial); Serial.println();
+        printd("message_doc: ");
+        json_printd(message_doc, Serial); printlnd();
         if (err) {
-          Serial.print(F("deserializeJson() failed: "));
-          Serial.println(err.c_str());
+          printd(F("deserializeJson() failed: "));
+          printlnd(err.c_str());
           }
         
         resend_counter=0;
       } else {
-        Serial.println("Asking for resend...");
+        printlnd("Asking for resend...");
         ask_for_resend(mac_addr,data_json);
         return;
       }
     resend_counter--;
   } 
   
-  Serial.print("Last Packet Recv from: "); Serial.println(macStr);
+  printd("Last Packet Recv from: "); printlnd(macStr);
   if (resend_counter==0){
-    Serial.println("Error: ckecksum not matching");
-    Serial.print("Last Packet Recv Data: "); 
-    Serial.println(*data);
-    Serial.println("");
+    printlnd("Error: ckecksum not matching");
+    printd("Last Packet Recv Data: "); 
+    printlnd(*data);
+    printlnd("");
     } else {
-    Serial.print("Decoded Message:"); 
-    serializeJson(message_doc, Serial);
-    Serial.println("");
-    Serial.println("");
-    serializeJson(message_doc["peers"]["hub"], Serial);
-    Serial.println("");
-    serializeJson(message_doc["header"]["DEVICE_ID"], Serial);
-    Serial.println("");
+    printd("Decoded Message:"); 
+    json_printd(message_doc, Serial);
+    printlnd("");
+    printlnd("");
+    json_printd(message_doc["peers"]["hub"], Serial);
+    printlnd("");
+    json_printd(message_doc["header"]["DEVICE_ID"], Serial);
+    printlnd("");
     resend_counter = 10;
    }  
   if (message_doc["header"]["DEVICE_TYPE"]==0 && hub_paired == false){
@@ -194,15 +194,15 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
     write_doc_to_EEPROM(0, eeprom_doc);
     
     // Register Hub as peer
-    Serial.print("hub_mac_addr : "); 
-    Serial.print(mac_addr[0]);Serial.print(":");
-    Serial.print(mac_addr[1]);Serial.print(":");
-    Serial.print(mac_addr[2]);Serial.print(":");
-    Serial.print(mac_addr[3]);Serial.print(":");
-    Serial.print(mac_addr[4]);Serial.print(":");
-    Serial.print(mac_addr[5]);Serial.println("");
+    printd("hub_mac_addr : "); 
+    printd(mac_addr[0]);printd(":");
+    printd(mac_addr[1]);printd(":");
+    printd(mac_addr[2]);printd(":");
+    printd(mac_addr[3]);printd(":");
+    printd(mac_addr[4]);printd(":");
+    printd(mac_addr[5]);printlnd("");
   
-    Serial.println(peerInfo.peer_addr[0]);
+    printlnd(peerInfo.peer_addr[0]);
     memset(&peerInfo, 0, sizeof(esp_now_peer_info_t));
     memcpy(peerInfo.peer_addr, mac_addr, sizeof(uint8_t[6]));
     peerInfo.channel = CHANNEL;
@@ -218,16 +218,16 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 
     // Add peer
     if (esp_now_add_peer(&peerInfo) != ESP_OK){
-      Serial.println("Failed to add peer");
+      printlnd("Failed to add peer");
     }
     else {
-      Serial.println("Hub added as peer at OnDataRecv");
-      Serial.println(peerInfo.peer_addr[5]);
+      printlnd("Hub added as peer at OnDataRecv");
+      printlnd(peerInfo.peer_addr[5]);
     }
   }
   
   write_doc_to_EEPROM(0, data_json);
-  Serial.println("Written Doc to EEPROM");
+  printlnd("Written Doc to EEPROM");
   eeprom_doc=read_doc_from_EEPROM(0);
   uint8_t hub_mac_addr[6] = {};
   hub_mac_addr[0] = eeprom_doc["hub_id"][0].as<unsigned int>();
@@ -237,14 +237,27 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
   hub_mac_addr[4] = eeprom_doc["hub_id"][4].as<unsigned int>();
   hub_mac_addr[5] = eeprom_doc["hub_id"][5].as<unsigned int>();
   
-  Serial.println("Double Check EEPROM Written");
-  Serial.print("Hub MAC address: ");
-  Serial.print(hub_mac_addr[0]);Serial.print(":");
-  Serial.print(hub_mac_addr[1]);Serial.print(":");
-  Serial.print(hub_mac_addr[2]);Serial.print(":");
-  Serial.print(hub_mac_addr[3]);Serial.print(":");
-  Serial.print(hub_mac_addr[4]);Serial.print(":");
-  Serial.print(hub_mac_addr[5]);Serial.println("");
+  printd("Hub MAC address: ");
+  printd(hub_mac_addr[0]);printd(":");
+  printd(hub_mac_addr[1]);printd(":");
+  printd(hub_mac_addr[2]);printd(":");
+  printd(hub_mac_addr[3]);printd(":");
+  printd(hub_mac_addr[4]);printd(":");
+  printd(hub_mac_addr[5]);printlnd("");
+
+//  For testing: (always pair when connected)
+  data_json["peers"]["hub"]["DEVICE_ID"] = message_doc["header"]["DEVICE_ID"];
+  
+  data_json["hub_id"][0] = mac_addr[0];
+  data_json["hub_id"][1] = mac_addr[1];
+  data_json["hub_id"][2] = mac_addr[2];
+  data_json["hub_id"][3] = mac_addr[3];
+  data_json["hub_id"][4] = mac_addr[4];
+  data_json["hub_id"][5] = mac_addr[5];
+  
+  eeprom_doc=data_json;
+  write_doc_to_EEPROM(0, data_json);
+//  End testing 
   
   String command = message_doc["command"].as<String>();
   if (command.indexOf("Sleep")>=0){
@@ -258,17 +271,25 @@ void OnDataRecv(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
 //    Do B
   } else if (command.indexOf("Pair")>=0){
       data_json["peers"]["hub"]["DEVICE_ID"] = message_doc["header"]["DEVICE_ID"];
+      
+      data_json["hub_id"][0] = mac_addr[0];
+      data_json["hub_id"][1] = mac_addr[1];
+      data_json["hub_id"][2] = mac_addr[2];
+      data_json["hub_id"][3] = mac_addr[3];
+      data_json["hub_id"][4] = mac_addr[4];
+      data_json["hub_id"][5] = mac_addr[5];
+      
       eeprom_doc=data_json;
-      write_doc_to_EEPROM(0, eeprom_doc);
+      write_doc_to_EEPROM(0, data_json);
   } else if (command.indexOf("Callback")>=0){
       data_json["command"] = "Callback";
-      Serial.print("Sending commands to: "); Serial.println(*mac_addr);
+      printd("Sending commands to: "); printlnd(*mac_addr);
       sendData(peerInfo.peer_addr, package_json(data_json));
-      Serial.println("Commands sent");
+      printlnd("Commands sent");
   } else {
 //    some thing went wrong, ask for clarification  
-    Serial.print("Cannot understand command: "); 
-//    Serial.println(message_doc["command"]);
+    printd("Cannot understand command: "); 
+//    printlnd(message_doc["command"]);
  
     command_clarification(mac_addr,data_json);
   }
@@ -279,8 +300,8 @@ void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
   char macStr[18];
   snprintf(macStr, sizeof(macStr), "%02x:%02x:%02x:%02x:%02x:%02x",
            mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
-  Serial.print("Last Packet Sent to: "); Serial.println(macStr);
-  Serial.print("Last Packet Send Status: "); Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+  printd("Last Packet Sent to: "); printlnd(macStr);
+  printd("Last Packet Send Status: "); printlnd(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
   
 }
 
