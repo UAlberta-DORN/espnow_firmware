@@ -3,7 +3,7 @@
 #include <ArduinoJson.h>
 #include <EEPROM.h>
 #include <WiFi.h>
-#include <SerialDebug.h>
+
 
 /* if no specific setting file include, include the default setting  */
 #ifndef DEVICE_TYPE
